@@ -1,0 +1,28 @@
+{
+  "name": "unifi-slack-bridge",
+  "description": "",
+  "version": "0.0.1",
+  "main": "index.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "unifi-events": "git+https://github.com:bpfoster/unifi-events.git#configApi"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oznu/unifi-events.git"
+  },
+  "keywords": [
+    "unifi",
+    "node.js",
+    "events"
+  ],
+  "author": "oznu <dev@oz.nu>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/oznu/unifi-events/issues"
+  },
+  "homepage": "https://github.com/oznu/unifi-events#readme"
+}

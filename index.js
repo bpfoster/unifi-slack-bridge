@@ -3,7 +3,7 @@ const rp = require('request-promise')
 
 // Helper function.  Get environment variable or die trying.
 const requireEnv = (key) => {
-  if(!process.env[key]) {
+  if (!process.env[key]) {
     console.log("Missing configuration " + key)
     process.exit(1)
   }
@@ -26,7 +26,7 @@ let unifi = new UnifiEvents({
   password: requireEnv('UNIFI_PASSWORD'),
   site: process.env.UNIFI_SITE || 'default',
   rejectUnauthorized: false  // allow self-signed certs
-  })
+})
 
 
 let registeredEvents = []
@@ -39,34 +39,46 @@ const _sendNotification = (text) => {
       username: slackUsername
     }
   })
-  .then(() => {
-    console.log(text)
-  })
-  .catch((err) => {
-    console.log(err)
-  })
+    .then(() => {
+      console.log(text)
+    })
+    .catch((err) => {
+      console.log(err)
+    })
 }
 
 const _callback = (data) => {
-  // Wireless guest is an especially interesting event and we want to show the names of the guest and AP, not their MAC addresses
-  // TODO: eventually do this name lookup for any event matching the pattern
-  if (data.key === 'EVT_WG_Connected') {
-    let client = data.msg.match(/Guest\[(.*?)\]/)[1]
-    let ap = data.msg.match(/AP\[(.*?)\]/)[1]
-
-    let clientValuePromise = _isMacAddress(client) ? unifi.getClient(client) : Promise.resolve(client)
-    let apValuePromise = _isMacAddress(ap) ? unifi.getAp(ap) : Promise.resolve(ap)
-
-    Promise.all([clientValuePromise, apValuePromise]).then(values => {
-      let newClientName = values[0] && values[0].name ? values[0].name : values[0].hostname ? values[0].hostname : client
-      let newApName = values[1] && values[1].name ? values[1].name : ap
-      
-      _sendNotification(data.msg.replace(client, newClientName).replace(ap, newApName))
+  // When Guest or AP shows MAC address, try and resolve that to displayable names
+  Promise.resolve(data.msg)
+    .then(msg => {
+      let guestMatch = msg.match(/Guest\[(.*?)\]/)
+      if (guestMatch && _isMacAddress(guestMatch[1])) {
+        return unifi.getClient(guestMatch[1])
+          .then(client =>
+            msg.replace(guestMatch[1], client.name || client.hostname || guestMatch[1])
+          ).catch(() =>
+            msg
+          )
+      } else {
+        return msg
+      }
     })
-
-  } else {
-    _sendNotification(data.msg)
-  }
+    .then(msg => {
+      let apMatch = msg.match(/AP\[(.*?)\]/)
+      if (apMatch && _isMacAddress(apMatch[1])) {
+        return unifi.getAp(apMatch[1])
+          .then(ap =>
+            msg.replace(apMatch[1], ap.name || apMatch[1])
+          ).catch(() =>
+            msg
+          )
+      } else {
+        return msg
+      }
+    })
+    .then(msg => {
+      _sendNotification(msg)
+    })
 
 }
 
